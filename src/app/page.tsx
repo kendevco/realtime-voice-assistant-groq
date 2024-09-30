@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import Microphone from "@/components/microphone";
+//import Microphone from "@/components/microphone";
 import AIVisionAnalyzer from '@/components/ai-vision-analyzer'
 import AudioTranscriber from '@/components/audio-transcriber';
 
