@@ -163,7 +163,7 @@ export default function AIVisionAnalyzer() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 dark:from-purple-900 dark:via-pink-900 dark:to-red-900 flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -227,8 +227,8 @@ export default function AIVisionAnalyzer() {
                   </Button>
                 </div>
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={!image || !instructions || isAnalyzing}
                 className="w-full py-6 text-lg font-semibold transition-all duration-300 transform hover:scale-105"
               >
@@ -249,13 +249,13 @@ export default function AIVisionAnalyzer() {
           <div className="w-full md:w-1/2">
             <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Analysis Result</h2>
             {analysis ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
                 className="space-y-4"
               >
-                <ScrollArea className="h-81 rounded-md border p-4">
+                <ScrollArea className="h-80 rounded-md border p-4">
                   <div className="text-gray-800 dark:text-gray-200 leading-relaxed">{analysis}</div>
                 </ScrollArea>
                 <div className="flex gap-4">
