@@ -3,12 +3,15 @@ const nextConfig = {
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
-      use: ["@svgr/webpack"],
+      use: ['@svgr/webpack']
     });
 
     return config;
   },
-  reactStrictMode: false,
+  env: {
+    NEXT_PUBLIC_VOICE_FAST_MODEL: process.env.NEXT_PUBLIC_VOICE_FAST_MODEL,
+  },
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
 };
 
 module.exports = nextConfig;

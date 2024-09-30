@@ -6,19 +6,22 @@ import {
   LiveTranscriptionEvents,
   createClient,
 } from "@deepgram/sdk";
-import { useState, useEffect, useCallback, use } from "react";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueue } from "@uidotdev/usehooks";
-import Dg from "./dg.svg";
-import Recording from "./recording.svg";
-import Image from "next/image";
 import axios from "axios";
 import Siriwave from 'react-siriwave';
-
+import Recording from '../../public/recording.svg'
 import ChatGroq from "groq-sdk";
 
+type ResponseQueueItem = {
+  text: string;
+  audio: string;
+};
+
+const MAX_CONTEXT_LENGTH = 5; // Configurable value for context length
 
 export default function Microphone() {
-  const { add, remove, first, size, queue } = useQueue<any>([]);
+  const { add, remove, first, size } = useQueue<Blob>([]);
   const [apiKey, setApiKey] = useState<CreateProjectKeyResponse | null>();
   const [neetsApiKey, setNeetsApiKey] = useState<string | null>();
   const [groqClient, setGroqClient] = useState<ChatGroq>();
@@ -32,6 +35,9 @@ export default function Microphone() {
   const [userMedia, setUserMedia] = useState<MediaStream | null>();
   const [caption, setCaption] = useState<string | null>();
   const [audio, setAudio] = useState<HTMLAudioElement | null>();
+  const [responseQueue, setResponseQueue] = useState<ResponseQueueItem[]>([]);
+  const [context, setContext] = useState<string[]>([]);
+  const isResponding = useRef(false);
 
   const toggleMicrophone = useCallback(async () => {
     if (microphone && userMedia) {
@@ -70,7 +76,7 @@ export default function Microphone() {
       fetch("/api/groq", { cache: "no-store" })
         .then((res) => res.json())
         .then((object) => {
-          const groq = new ChatGroq({ apiKey: object.apiKey, dangerouslyAllowBrowser: true});
+          const groq = new ChatGroq({ apiKey: object.apiKey, dangerouslyAllowBrowser: true });
 
           setGroqClient(groq);
           setLoadingKey(false);
@@ -78,7 +84,7 @@ export default function Microphone() {
         .catch((e) => {
           console.error(e);
         });
-      
+
     }
   }, [groqClient]);
 
@@ -116,8 +122,17 @@ export default function Microphone() {
     }
   }, [apiKey]);
 
+  // Update the context management
   useEffect(() => {
-    
+    if (caption) {
+      setContext(prevContext => {
+        const newContext = [...prevContext, caption];
+        return newContext.slice(-MAX_CONTEXT_LENGTH);
+      });
+    }
+  }, [caption]);
+
+  useEffect(() => {
     if (apiKey && "key" in apiKey) {
       console.log("connecting to deepgram");
       const deepgram = createClient(apiKey?.key ?? "");
@@ -143,59 +158,39 @@ export default function Microphone() {
       connection.on(LiveTranscriptionEvents.Transcript, (data) => {
         const words = data.channel.alternatives[0].words;
         const caption = words
-          .map((word: any) => word.punctuated_word ?? word.word)
+          .map((word: { punctuated_word?: string; word: string }) => word.punctuated_word ?? word.word)
           .join(" ");
+
         if (caption !== "") {
           setCaption(caption);
-          if (data.is_final) {            
+
+          if (data.is_final && !isResponding.current) {
+            isResponding.current = true;
             if (groqClient) {
-              const completion = groqClient.chat.completions
-              .create({
-                messages: [
-                  {
-                    role: "assistant",
-                    content: "You are communicating with the user on a phone, so your answers should not be too long and go directly to the essence of the sentences.",
-                  },
-                  {
-                    role: "user",
-                    content: caption,
-                  }
-                ],
-                model: "mixtral-8x7b-32768",
-              })
-              .then((chatCompletion) => {
-                if (neetsApiKey) {
-                  setCaption(chatCompletion.choices[0]?.message?.content || "");
-                  axios.post("https://api.neets.ai/v1/tts", {
-                      text: chatCompletion.choices[0]?.message?.content || "",
-                      voice_id: 'us-female-2',
-                      params: {
-                        model: 'style-diff-500'
-                      }
-                    },
+              groqClient.chat.completions
+                .create({
+                  messages: [
                     {
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': neetsApiKey
-                      },
-                      responseType: 'arraybuffer'
+                      role: "assistant",
+                      content: "You are communicating with the user on a phone, so your answers should not be too long and go directly to the essence of the sentences.",
+                    },
+                    ...context.map(msg => ({ role: "user" as const, content: msg })),
+                    {
+                      role: "user",
+                      content: caption,
                     }
-                    ).then((response) => {
-                      const blob = new Blob([response.data], { type: 'audio/mp3' });
-                      const url = URL.createObjectURL(blob);
-
-                      const audio = new Audio(url);
-                      setAudio(audio);
-                      console.log('Playing audio.');
-                      
-                      audio.play();
-                    })
-                    .catch((error) => {
-                      console.error(error);
-                    });
-                }
-              });
-
+                  ],
+                  model: process.env.NEXT_PUBLIC_VOICE_FAST_MODEL || "mixtral-8x7b-32768",
+                })
+                .then((chatCompletion) => {
+                  if (neetsApiKey) {
+                    const response = chatCompletion.choices[0]?.message?.content || "";
+                    setResponseQueue(prevQueue => [...prevQueue, { text: response, audio: '' }]);
+                  }
+                })
+                .finally(() => {
+                  isResponding.current = false;
+                });
             }
           }
         }
@@ -204,16 +199,61 @@ export default function Microphone() {
       setConnection(connection);
       setLoading(false);
     }
-  }, [apiKey]);
+  }, [apiKey, context, groqClient, neetsApiKey]);
+
+  // Update the response queue effect
+  useEffect(() => {
+    const processNextResponse = async () => {
+      if (responseQueue.length > 0 && !audio) {
+        const response = responseQueue[0];
+        setCaption(response.text);
+
+        try {
+          const axiosResponse = await axios.post("https://api.neets.ai/v1/tts", {
+            text: response.text,
+            voice_id: 'us-female-2',
+            params: { model: 'style-diff-500' }
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': neetsApiKey
+            },
+            responseType: 'arraybuffer'
+          });
+
+          const blob = new Blob([axiosResponse.data], { type: 'audio/mp3' });
+          const url = URL.createObjectURL(blob);
+          const newAudio = new Audio(url);
+
+          setAudio(newAudio);
+          setListening(false);
+
+          await newAudio.play();
+
+          setResponseQueue(prevQueue => prevQueue.slice(1));
+          setListening(true);
+          setAudio(null);
+        } catch (error) {
+          console.error(error);
+          setResponseQueue(prevQueue => prevQueue.slice(1));
+          setListening(true);
+        }
+      }
+    };
+
+    processNextResponse();
+  }, [responseQueue, audio, neetsApiKey]);
 
   useEffect(() => {
     const processQueue = async () => {
       if (size > 0 && !isProcessing) {
         setProcessing(true);
 
-        if (isListening) {
+        if (isListening && connection) {
           const blob = first;
-          connection?.send(blob);
+          if (blob) {
+            connection.send(blob);
+          }
           remove();
         }
 
@@ -225,7 +265,7 @@ export default function Microphone() {
     };
 
     processQueue();
-  }, [connection, queue, remove, first, size, isProcessing, isListening]);
+  }, [connection, remove, first, size, isProcessing, isListening]);
 
   function handleAudio() {
     return audio && audio.currentTime > 0 && !audio.paused && !audio.ended && audio.readyState > 2;
@@ -240,11 +280,11 @@ export default function Microphone() {
 
   return (
     <div className="w-full relative">
-      <div className="relative flex w-screen flex justify-center items-center max-w-screen-lg place-items-center content-center before:pointer-events-none after:pointer-events-none before:absolute before:right-0 after:right-1/4 before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px]">
-      <Siriwave
-        theme="ios9"
-        autostart={handleAudio() || false}
-       />
+      <div className="relative w-screen flex justify-center items-center max-w-screen-lg place-items-center content-center before:pointer-events-none after:pointer-events-none before:absolute before:right-0 after:right-1/4 before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px]">
+        <Siriwave
+          theme="ios9"
+          autostart={handleAudio() || false}
+        />
       </div>
       <div className="mt-10 flex flex-col align-middle items-center">
         <button className="w-24 h-24" onClick={() => toggleMicrophone()}>
@@ -252,9 +292,9 @@ export default function Microphone() {
             width="96"
             height="96"
             className={
-              `cursor-pointer` + !!userMedia && !!microphone && micOpen
-                ? "fill-red-400 drop-shadow-glowRed"
-                : "fill-gray-600"
+              `cursor-pointer` + ((!!userMedia && !!microphone && micOpen)
+                ? " fill-red-400 drop-shadow-glowRed"
+                : " fill-gray-600")
             }
           />
         </button>
@@ -262,7 +302,6 @@ export default function Microphone() {
           {caption}
         </div>
       </div>
-      
     </div>
   );
 }

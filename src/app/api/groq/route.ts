@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export const GET = async () => {
     const apiKey = process.env.GROQ_API_KEY
