@@ -12,6 +12,9 @@ const nextConfig = {
     NEXT_PUBLIC_VOICE_FAST_MODEL: process.env.NEXT_PUBLIC_VOICE_FAST_MODEL,
   },
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  experimental: {
+    serverComponentsExternalPackages: ['@node-rs/argon2'],
+  },
 };
 
 module.exports = nextConfig;
