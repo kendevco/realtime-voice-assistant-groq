@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Mic, FileAudio, Download, Save, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
+import { track } from '@vercel/analytics';
+import { toast } from 'react-hot-toast'; // Assuming you're using react-hot-toast for notifications
 
 export default function AudioTranscriber() {
   const [file, setFile] = useState<File | null>(null);
@@ -18,12 +20,24 @@ export default function AudioTranscriber() {
 
   useEffect(() => {
     setTheme('dark');
-  }, [setTheme]); // Add setTheme to the dependency array
+  }, [setTheme]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFile(e.target.files[0]);
+      try {
+        track('File Selected', { fileName: e.target.files[0].name });
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error('Error processing audio:', error.message);
+          toast.error(`Error processing audio: ${error.message}`);
+        } else {
+          console.error('An unknown error occurred');
+          toast.error('An unknown error occurred');
+        }
+      }
     }
+
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -34,6 +48,7 @@ export default function AudioTranscriber() {
     const formData = new FormData();
     formData.append('file', file);
     try {
+      track('Transcription Started', { fileName: file.name });
       const response = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
@@ -43,9 +58,19 @@ export default function AudioTranscriber() {
       }
       const result = await response.json();
       setTranscription(result.transcription);
-    } catch (error) {
+      track('Transcription Completed', { fileName: file.name });
+    } catch (error: unknown) {
       console.error('Error during transcription:', error);
       alert('An error occurred during transcription. Please try again.');
+
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      track('Transcription Error', { fileName: file.name, error: errorMessage });
     } finally {
       setIsTranscribing(false);
     }
@@ -62,6 +87,7 @@ export default function AudioTranscriber() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      track('Transcription Downloaded');
     }
   };
 
@@ -84,14 +110,22 @@ export default function AudioTranscriber() {
       await writable.write(transcription);
       await writable.close();
       alert('Transcription saved successfully!');
+      track('Transcription Saved', { fileName: suggestedName });
     } catch (err) {
-      console.error('Failed to save the file:', err);
-      alert('Failed to save the transcription. Please try again.');
+      if (err instanceof Error) {
+        console.error('Error saving transcription:', err.message);
+        toast.error(`Error saving transcription: ${err.message}`);
+      } else {
+        console.error('An unknown error occurred while saving');
+        toast.error('An unknown error occurred while saving');
+      }
     }
   };
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    track('Theme Toggled', { newTheme });
   };
 
   return (
@@ -160,10 +194,10 @@ export default function AudioTranscriber() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="space-y-4"
+                className={`bg-background text-foreground ${theme === 'dark' ? 'dark' : ''}`}
               >
                 <ScrollArea className="h-48 rounded-md border p-4">
-                  <div className="text-gray-800 leading-relaxed">{transcription}</div>
+                  <div className="text-foreground leading-relaxed">{transcription}</div>
                 </ScrollArea>
                 <div className="flex gap-4">
                   <Button onClick={handleDownload} className="flex-1 py-4 text-lg font-semibold">

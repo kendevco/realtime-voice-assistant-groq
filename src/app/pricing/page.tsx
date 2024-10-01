@@ -2,8 +2,21 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { useRouter } from 'next/navigation'
+import { track } from '@vercel/analytics'
 
 export default function PricingPage() {
+  const router = useRouter()
+
+  const handlePlanClick = (plan: string) => {
+    if (plan === 'Enterprise') {
+      track('Enterprise Plan Clicked')
+    } else {
+      track('Plan Selected', { plan })
+      router.push('/ai-image-helper')
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 text-center">Pricing Plans</h1>
@@ -25,7 +38,10 @@ export default function PricingPage() {
                 {plan !== 'Basic' && <li className="mb-2">✓ Advanced Feature</li>}
                 {plan === 'Enterprise' && <li>✓ Custom Solutions</li>}
               </ul>
-              <Button className="w-full">
+              <Button 
+                className="w-full" 
+                onClick={() => handlePlanClick(plan)}
+              >
                 {plan === 'Enterprise' ? 'Contact Us' : 'Get Started'}
               </Button>
             </CardContent>

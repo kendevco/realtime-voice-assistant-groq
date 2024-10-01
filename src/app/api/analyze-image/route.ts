@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const IMAGE_ANALYSIS_PROMPT =
-  "Analyze the following image and provide a detailed description of its contents, including any text, objects, people, or notable features:";
+const IMAGE_ANALYSIS_PROMPT = `Analyze the provided image and describe it in detail. Format your response in markdown, using appropriate headers, paragraphs, and bullet points where relevant. Include the following aspects in your analysis:
+
+- Overall scene description
+- Key elements and their arrangement
+- Colors and lighting
+- Atmosphere and mood
+- Any text or logos visible
+- Unique or notable features
+
+Ensure your description is vivid and well-structured.`;
 
 export async function POST(req: NextRequest) {
   console.log("Image analysis request received");
@@ -34,7 +42,7 @@ export async function POST(req: NextRequest) {
               content: [
                 {
                   type: "text",
-                  text: `${IMAGE_ANALYSIS_PROMPT}\n\nExplain user provided image. User Provided instructions: ${instructions}`,
+                  text: `${IMAGE_ANALYSIS_PROMPT}\n\nAnalyze the following image. Additional instructions: ${instructions}`,
                 },
                 {
                   type: "image_url",

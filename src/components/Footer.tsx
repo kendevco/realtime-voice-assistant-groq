@@ -29,7 +29,7 @@ export function Footer() {
             <h4 className="font-semibold mb-4">Connect</h4>
             <ul className="space-y-2">
               <li><a href="https://github.com/kendevco" className="text-sm hover:underline">GitHub</a></li>
-              <li><a href="https://linkedin.com/kendevco" className="text-sm hover:underline">LinkedIn</a></li>
+              <li><a href="https://www.linkedin.com/in/kendevco" className="text-sm hover:underline">LinkedIn</a></li>
               <li><a href="https://kendev.co" className="text-sm hover:underline">KenDev.co</a></li>
               <li><a href="mailto:support@microsaas.com" className="text-sm hover:underline">Contact Us</a></li>
             </ul>

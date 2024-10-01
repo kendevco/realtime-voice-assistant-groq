@@ -1,6 +1,7 @@
 import { ThemeProvider } from "@/components/theme-provider"
 import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
+import { Analytics } from "@vercel/analytics/react";
 
 import type { Metadata } from "next";
 import localFont from "next/font/local";
@@ -39,7 +40,7 @@ export default function RootLayout({
             <Footer />
           </div>
         </ThemeProvider>
-
+        <Analytics />
       </body>
     </html>
   );

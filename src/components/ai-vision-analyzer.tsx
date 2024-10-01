@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
+import { track } from '@vercel/analytics';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 
 export default function AiVisionAnalyzer() {
   const [image, setImage] = useState<string | null>(null);
@@ -25,6 +27,7 @@ export default function AiVisionAnalyzer() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | undefined>(undefined);
+  const [isListening, setIsListening] = useState(false);
 
   const { theme, setTheme } = useTheme();
 
@@ -64,6 +67,7 @@ export default function AiVisionAnalyzer() {
     const imageSrc = webcamRef.current?.getScreenshot();
     if (imageSrc) {
       setImage(imageSrc);
+      track('Image Captured', { source: 'webcam' });
     }
   }, [webcamRef]);
 
@@ -73,6 +77,7 @@ export default function AiVisionAnalyzer() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result as string);
+        track('Image Uploaded', { fileName: file.name });
       };
       reader.readAsDataURL(file);
     }
@@ -112,10 +117,11 @@ export default function AiVisionAnalyzer() {
 
   const sendAudioToWhisper = async (audioBlob: Blob) => {
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.wav');
+    formData.append('file', audioBlob, 'recording.wav');
 
     try {
-      const response = await fetch('/api/transcribe-whisper', {
+      setIsListening(true);
+      const response = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
       });
@@ -124,11 +130,22 @@ export default function AiVisionAnalyzer() {
       }
       const result = await response.json();
       setInstructions(result.transcription);
-      handleSubmit(); // Auto-submit after transcription
+      track('Audio Transcribed', { length: audioBlob.size });
     } catch (error) {
       console.error('Error during transcription:', error);
       alert('An error occurred during transcription. Please try again.');
+    } finally {
+      setIsListening(false);
     }
+  };
+
+  const formatAnalysis = (rawAnalysis: string) => {
+    // You can add more sophisticated formatting logic here
+    // For now, we'll just ensure the analysis is wrapped in markdown code blocks if it's not already
+    if (!rawAnalysis.trim().startsWith('```') && !rawAnalysis.trim().endsWith('```')) {
+      return '```\n' + rawAnalysis + '\n```';
+    }
+    return rawAnalysis;
   };
 
   const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
@@ -148,7 +165,8 @@ export default function AiVisionAnalyzer() {
         throw new Error('Analysis failed');
       }
       const result = await response.json();
-      setAnalysis(result.analysis);
+      setAnalysis(formatAnalysis(result.analysis));
+      track('Image Analyzed', { instructionsLength: instructions.length });
     } catch (error) {
       console.error('Error during image analysis:', error);
       alert('An error occurred during image analysis. Please try again.');
@@ -160,7 +178,10 @@ export default function AiVisionAnalyzer() {
   const handleCopy = () => {
     if (analysis) {
       navigator.clipboard.writeText(analysis)
-        .then(() => alert('Analysis copied to clipboard!'))
+        .then(() => {
+          alert('Analysis copied to clipboard!');
+          track('Analysis Copied', { analysisLength: analysis.length });
+        })
         .catch(err => console.error('Failed to copy text: ', err));
     }
   };
@@ -182,6 +203,7 @@ export default function AiVisionAnalyzer() {
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
         audio.play();
+        track('Analysis Listened', { analysisLength: analysis.length });
       } catch (error) {
         console.error('Error during text-to-speech conversion:', error);
         alert('An error occurred during text-to-speech conversion. Please try again.');
@@ -208,6 +230,7 @@ export default function AiVisionAnalyzer() {
       await writable.write(analysis);
       await writable.close();
       alert('Analysis saved successfully!');
+      track('Analysis Saved', { fileName: filename, analysisLength: analysis.length });
     } catch (err) {
       console.error('Failed to save the file:', err);
       alert('Failed to save the analysis. Please try again.');
@@ -227,6 +250,7 @@ export default function AiVisionAnalyzer() {
           const reader = new FileReader();
           reader.onload = (event) => {
             setImage(event.target?.result as string);
+            track('Image Pasted', { fileType: blob.type });
           };
           reader.readAsDataURL(blob);
         }
@@ -333,14 +357,21 @@ export default function AiVisionAnalyzer() {
           <div className="space-y-2">
             <Label htmlFor="instructions" className={`text-lg font-semibold ${theme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>Instructions</Label>
             <div className="flex gap-2">
-              <Textarea
-                id="instructions"
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Enter instructions or use voice input"
-                className="flex-grow"
-                rows={3}
-              />
+              {isListening ? (
+                <div className="flex-grow p-2 bg-gray-100 dark:bg-gray-700 rounded-md text-center">
+                  <span className="text-gray-500 dark:text-gray-400">{'<<< Listening >>>'}</span>
+                </div>
+              ) : (
+                <Textarea
+                  id="instructions"
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  placeholder="Enter instructions or use voice input"
+                  className="flex-grow"
+                  rows={3}
+                  disabled={isRecording}
+                />
+              )}
               <Button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
@@ -369,9 +400,7 @@ export default function AiVisionAnalyzer() {
           </Button>
         </form>
         <div className="mt-8">
-          <h2 className={`text-2xl font-semibold mb-4 ${theme === 'light' ? 'text-gray-800' :
-
-            'text-gray-200'}`}>Analysis Result</h2>
+          <h2 className={`text-2xl font-semibold mb-4 ${theme === 'light' ? 'text-gray-800' : 'text-gray-200'}`}>Analysis Result</h2>
           {analysis ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -380,7 +409,9 @@ export default function AiVisionAnalyzer() {
               className="space-y-4"
             >
               <ScrollArea className="h-[calc(100vh-24rem)] md:h-96 rounded-md border p-4">
-                <div className={`${theme === 'light' ? 'text-gray-800' : 'text-gray-200'} leading-relaxed`}>{analysis}</div>
+                <div className={`${theme === 'light' ? 'text-gray-800' : 'text-gray-200'} leading-relaxed prose prose-sm ${theme === 'light' ? 'prose-gray' : 'prose-invert'} max-w-none`}>
+                  <MarkdownRenderer content={analysis} />
+                </div>
               </ScrollArea>
               <div className="flex gap-4 flex-wrap">
                 <Button onClick={handleListen} className="flex-1 py-4 text-lg font-semibold">

@@ -1,7 +1,12 @@
+'use client';
+
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
+import { useRouter } from 'next/navigation'
 
 export function HomePageHero() {
+  const router = useRouter()
+
   return (
     <div className="container mx-auto px-4 py-16 md:py-24">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -13,8 +18,8 @@ export function HomePageHero() {
             Upload any image and get instant AI-powered insights. Enhance your workflow with our cutting-edge image analysis tool.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg">Get Started</Button>
-            <Button size="lg" variant="outline">Learn More</Button>
+            <Button size="lg" onClick={() => router.push('/ai-image-helper')}>Get Started</Button>
+            <Button size="lg" variant="outline" onClick={() => router.push('/about')}>Learn More</Button>
           </div>
         </div>
         <div className="relative aspect-video">
