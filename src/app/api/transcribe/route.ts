@@ -11,22 +11,20 @@ export async function POST(req: NextRequest) {
 
   try {
     const formData = await req.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get('file');
 
-    if (!file) {
-      console.error('No file provided');
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    if (!file || !(file instanceof Blob)) {
+      console.error('No file provided or invalid file type');
+      return NextResponse.json({ error: 'No file provided or invalid file type' }, { status: 400 });
     }
 
-    console.log('File received:', file.name);
+    console.log('File received');
 
-    const buffer = await file.arrayBuffer();
-    const fileStream = new Blob([buffer]);
+    const buffer = Buffer.from(await file.arrayBuffer());
 
     console.log('Sending request to Groq API');
-    const fileForTranscription = new File([fileStream], 'audio.wav', { type: fileStream.type });
     const transcription = await openai.audio.transcriptions.create({
-      file: fileForTranscription,
+      file: new File([buffer], 'audio.wav', { type: 'audio/wav' }),
       model: 'whisper-large-v3',
     });
 

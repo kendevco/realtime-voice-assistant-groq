@@ -1,30 +1,46 @@
-import React from 'react';
+import { ThemeProvider } from "@/components/theme-provider"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { ThemeProvider } from 'next-themes'
-import { Analytics } from "@vercel/analytics/react"
+import localFont from "next/font/local";
 import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'] });
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
 
 export const metadata: Metadata = {
-  title: 'Picture Explainer, Audio Transcriber, and Realtime Voice Assistant',
-  description: 'Picture Explainer, Audio Transcriber, and Realtime Voice Assistant',
-}
+  title: "KenDev.co MicroSaaS App",
+  description: "With Love by Kendev.co",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <Analytics />
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          {children}
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+          </div>
         </ThemeProvider>
+
       </body>
     </html>
-  )
+  );
 }

@@ -1,46 +1,36 @@
-# Groq-Powered Real-Time Voice Assistant with Next.Js neets deepgram
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Voice-driven interactions with groq, a real-time voice assistant that seamlessly blends Next.js for web functionality, Groq for LLM, Deepgram for live transcription TTS with Neets for TTS. [Next.js](https://nextjs.org/)  [Deepgram](https://deepgram.com/) [Groq](https://groq.com/) [Neets](https://neets.ai/).
+## Getting Started
 
-## Example Video
-[Example Video](https://github.com/serkandyck/realtime-voice-assistant-groq/assets/12444059/f2823fcb-d42f-4901-be17-f61d6e38e1c0)
-
-## Quickstart
-
-### Manual
-
-Follow these steps to get started with this application.
-
-#### Clone the repository
-
-Go to GitHub and [clone the repository](https://github.com/serkandyck/realtime-voice-assistant-groq).
-
-#### Install dependencies
-
-Install the project dependencies.
-
-```bash
-npm install
-```
-
-#### Edit the config file
-
-Copy the code from `sample.env.local` and create a new file called `.env.local`. Paste in the code and enter your API key.
-
-```bash
-DEEPGRAM_API_KEY="apikey"
-NEETS_API_KEY="apikey"
-GROQ_API_KEY="apikey"
-```
-
-#### Run the application
-
-Once running, you can [access the application in your browser](http://localhost:3000).
+First, run the development server:
 
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## Author
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-[SERKAN DAYICIK](https://www.linkedin.com/in/serkandyck/)
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

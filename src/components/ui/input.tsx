@@ -2,9 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-// Remove the interface declaration completely
-
-const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, type, ...props }, ref) => {
     return (
       <input
@@ -21,4 +19,3 @@ const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLI
 )
 Input.displayName = "Input"
 
-export { Input }
