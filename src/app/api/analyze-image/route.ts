@@ -9,7 +9,9 @@ const IMAGE_ANALYSIS_PROMPT = `Analyze the provided image and describe it in det
 - Any text or logos visible
 - Unique or notable features
 
-Ensure your description is vivid and well-structured.`;
+Ensure your description is vivid and well-structured.
+
+If the user has provided specific instructions for analysis, focus on those aspects. If the user's instructions are vague or not provided, include all the points mentioned above in your analysis.`;
 
 export async function POST(req: NextRequest) {
   console.log("Image analysis request received");

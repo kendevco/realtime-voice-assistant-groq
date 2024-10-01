@@ -2,37 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: process.env.GROQ_BASE_URL,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
-  console.log('Transcription request received');
+  if (!openai.apiKey) {
+    return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
+  }
 
   try {
     const formData = await req.formData();
-    const file = formData.get('file');
+    const audioFile = formData.get('file') as Blob;
 
-    if (!file || !(file instanceof Blob)) {
-      console.error('No file provided or invalid file type');
-      return NextResponse.json({ error: 'No file provided or invalid file type' }, { status: 400 });
+    if (!audioFile) {
+      return NextResponse.json({ error: "No audio file provided" }, { status: 400 });
     }
 
-    console.log('File received');
+    const buffer = await audioFile.arrayBuffer();
+    const audioData = new Uint8Array(buffer);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    console.log('Sending request to Groq API');
-    const transcription = await openai.audio.transcriptions.create({
-      file: new File([buffer], 'audio.wav', { type: 'audio/wav' }),
-      model: 'whisper-large-v3',
+    const response = await openai.audio.transcriptions.create({
+      file: new File([audioData], 'audio.wav', { type: 'audio/wav' }),
+      model: "whisper-1",
     });
 
-    console.log('Transcription received:', transcription);
-
-    return NextResponse.json({ transcription: transcription.text });
+    return NextResponse.json({ transcription: response.text });
   } catch (error) {
-    console.error('Error during transcription:', error);
-    return NextResponse.json({ error: 'Transcription failed' }, { status: 500 });
+    if (error instanceof Error) {
+      console.error(`Error with OpenAI API request: ${error.message}`);
+    } else {
+      console.error(`Unknown error with OpenAI API request`);
+    }
+    return NextResponse.json({ error: "An error occurred during transcription" }, { status: 500 });
   }
 }

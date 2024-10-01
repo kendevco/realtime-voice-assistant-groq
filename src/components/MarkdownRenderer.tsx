@@ -1,27 +1,54 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 
 interface MarkdownRendererProps {
   content: string;
 }
 
-export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />,
-        h2: ({ ...props }) => <h2 className="text-xl font-bold mt-3 mb-2" {...props} />,
-        p: ({ ...props }) => <p className="mb-2" {...props} />,
-        ul: ({ ...props }) => <ul className="list-disc pl-5 mb-2" {...props} />,
-        ol: ({ ...props }) => <ol className="list-decimal pl-5 mb-2" {...props} />,
-        li: ({ ...props }) => <li className="mb-1" {...props} />,
-        strong: ({ ...props }) => <strong className="font-bold" {...props} />,
-        em: ({ ...props }) => <em className="italic" {...props} />,
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+    <div className="markdown-renderer">
+      <ReactMarkdown
+        components={{
+          code({ inline, className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '');
+            return !inline && match ? (
+              <SyntaxHighlighter
+                style={vscDarkPlus}
+                language={match[1]}
+                PreTag="div"
+                {...props}
+              >
+                {String(children).replace(/\n$/, '')}
+              </SyntaxHighlighter>
+            ) : (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+      <style jsx global>{`
+        .markdown-renderer {
+          width: 100%;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
+        }
+        .markdown-renderer p,
+        .markdown-renderer li {
+          white-space: pre-wrap;
+        }
+        .markdown-renderer pre {
+          white-space: pre-wrap;
+          word-break: break-all;
+        }
+      `}</style>
+    </div>
   );
-}
+};
