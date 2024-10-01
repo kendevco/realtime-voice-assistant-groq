@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Mic, FileAudio, Download, Save, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
 import { track } from '@vercel/analytics';
-import { toast } from 'react-hot-toast'; // Assuming you're using react-hot-toast for notifications
+import { useToast } from "@/hooks/use-toast";
 
 export default function AudioTranscriber() {
   const [file, setFile] = useState<File | null>(null);
@@ -17,38 +17,65 @@ export default function AudioTranscriber() {
   const [transcription, setTranscription] = useState<string | null>(null);
 
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
 
   useEffect(() => {
     setTheme('dark');
-  }, [setTheme]);
+    toast({
+      title: "Welcome",
+      description: "Audio Transcriber is ready to use!",
+    });
+  }, [setTheme, toast]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFile(e.target.files[0]);
       try {
         track('File Selected', { fileName: e.target.files[0].name });
+        toast({
+          title: "File Selected",
+          description: `${e.target.files[0].name} has been selected.`,
+        });
       } catch (error) {
         if (error instanceof Error) {
           console.error('Error processing audio:', error.message);
-          toast.error(`Error processing audio: ${error.message}`);
+          toast({
+            title: "Error",
+            description: `Error processing audio: ${error.message}`,
+            variant: "destructive",
+          });
         } else {
           console.error('An unknown error occurred');
-          toast.error('An unknown error occurred');
+          toast({
+            title: "Error",
+            description: "An unknown error occurred",
+            variant: "destructive",
+          });
         }
       }
     }
-
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file) {
+      toast({
+        title: "Error",
+        description: "Please select a file before transcribing.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsTranscribing(true);
     setTranscription(null);
     const formData = new FormData();
     formData.append('file', file);
     try {
       track('Transcription Started', { fileName: file.name });
+      toast({
+        title: "Transcription Started",
+        description: "Your audio is being transcribed...",
+      });
       const response = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
@@ -59,9 +86,17 @@ export default function AudioTranscriber() {
       const result = await response.json();
       setTranscription(result.transcription);
       track('Transcription Completed', { fileName: file.name });
+      toast({
+        title: "Transcription Completed",
+        description: "Your audio has been successfully transcribed!",
+      });
     } catch (error: unknown) {
       console.error('Error during transcription:', error);
-      alert('An error occurred during transcription. Please try again.');
+      toast({
+        title: "Error",
+        description: "An error occurred during transcription. Please try again.",
+        variant: "destructive",
+      });
 
       let errorMessage = 'Unknown error';
       if (error instanceof Error) {
@@ -88,11 +123,28 @@ export default function AudioTranscriber() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       track('Transcription Downloaded');
+      toast({
+        title: "Download Complete",
+        description: "Your transcription has been downloaded.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "No transcription available to download.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSave = async () => {
-    if (!transcription || !file) return;
+    if (!transcription || !file) {
+      toast({
+        title: "Error",
+        description: "No transcription available to save.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const originalFileName = file.name.split('.').slice(0, -1).join('.');
     const suggestedName = `${originalFileName}_transcript.txt`;
@@ -109,15 +161,26 @@ export default function AudioTranscriber() {
       const writable = await fileHandle.createWritable();
       await writable.write(transcription);
       await writable.close();
-      alert('Transcription saved successfully!');
+      toast({
+        title: "Success",
+        description: "Transcription saved successfully!",
+      });
       track('Transcription Saved', { fileName: suggestedName });
     } catch (err) {
       if (err instanceof Error) {
         console.error('Error saving transcription:', err.message);
-        toast.error(`Error saving transcription: ${err.message}`);
+        toast({
+          title: "Error",
+          description: `Error saving transcription: ${err.message}`,
+          variant: "destructive",
+        });
       } else {
         console.error('An unknown error occurred while saving');
-        toast.error('An unknown error occurred while saving');
+        toast({
+          title: "Error",
+          description: "An unknown error occurred while saving",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -126,6 +189,10 @@ export default function AudioTranscriber() {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     track('Theme Toggled', { newTheme });
+    toast({
+      title: "Theme Changed",
+      description: `Theme switched to ${newTheme} mode.`,
+    });
   };
 
   return (

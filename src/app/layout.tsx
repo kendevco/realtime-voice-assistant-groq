@@ -2,6 +2,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
 import { Analytics } from "@vercel/analytics/react";
+import { Toaster } from "@/components/ui/toaster";
 
 import type { Metadata } from "next";
 import localFont from "next/font/local";
@@ -41,6 +42,7 @@ export default function RootLayout({
           </div>
         </ThemeProvider>
         <Analytics />
+        <Toaster />
       </body>
     </html>
   );

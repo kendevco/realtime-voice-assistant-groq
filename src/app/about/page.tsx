@@ -1,4 +1,6 @@
 'use client'
+
+import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
 import { track } from '@vercel/analytics'
@@ -19,6 +21,15 @@ export default function AboutPage() {
           <p className="mb-4">Founded in 2023 by a team of AI enthusiasts and software engineers, MicroSaaS started as a passion project. We were frustrated by the lack of affordable, user-friendly AI tools in the market and decided to create our own.</p>
           <p className="mb-4">What began as a simple idea has now grown into a suite of powerful AI tools used by thousands of satisfied customers worldwide. We&apos;re proud of how far we&apos;ve come, but we&apos;re even more excited about the future.</p>
         </div>
+      </div>
+      <div className="relative aspect-video">
+        <Image
+          src="/kenjoker1.png"
+          alt="Kenneth Joker"
+          fill
+          style={{ objectFit: 'contain' }}
+          priority
+        />
       </div>
       <div className="mt-8">
         <h2 className="text-2xl font-semibold mb-4">Our Values</h2>
